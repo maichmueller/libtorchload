@@ -1,0 +1,7 @@
+requests
+argparse
+sys
+zipfile
+os
+urllib
+tqdm
