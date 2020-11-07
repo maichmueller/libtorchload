@@ -1,6 +1,5 @@
 requests
 argparse
-sys
 zipfile
 os
 urllib
