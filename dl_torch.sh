@@ -5,95 +5,90 @@
 cuda=false
 cuda_version=cpu
 os=linux
-build=debug  # by default we would grab the debug package of libtorch (windows only)
-target_dir=$(dirname $(readlink -f $0))  # target dir is the dir of this script by default
-for i in "$@"
-do
-case $i in
-    -c=*|--cuda=*)
+build=debug # by default we would grab the debug package of libtorch (windows only)
+version=1.9.0
+target_dir=$(dirname $(readlink -f $0)) # target dir is the dir of this script by default
+for i in "$@"; do
+  case $i in
+  -c=* | --cuda=*)
     cuda="${i#*=}"
     shift # past argument=value
     ;;
-    -s=*|--os=*)
+  -o=* | --os=*)
     os="${i#*=}"
     shift # past argument=value
     ;;
-    --cuda_version=*)
+  -cv=* | --cuda-version=*)
     cuda_version="${i#*=}"
     shift # past argument=value
     ;;
-    -b=*|--build=*)
+  -b=* | --build-type=*)
     build="${i#*=}"
     shift # past argument=value
     ;;
-    -t=*|--targetdir=*)
+  -t=* | --targetdir=*)
     target_dir="${i#*=}"
     shift # past argument=value
     ;;
-    *)
-          # unknown option
+  -v=* | --version=*)
+    version="${i#*=}"
+    shift # past argument=value
     ;;
-esac
+  *)
+    # unknown option
+    ;;
+  esac
 done
 
-if [ "$cuda_version" == "10" ] || \
-   [ "$cuda_version" == "102" ] || \
-   [ "$cuda_version" == "10-2" ] || \
-   [ "$cuda_version" == "10.2" ]; then \
-  cuda_version=cu102; \
-elif [ "$cuda_version" == "101" ] || \
-     [ "$cuda_version" == "10-1" ] || \
-     [ "$cuda_version" == "10.1" ]; then \
-  cuda_version=cu101; \
-elif [ "$cuda_version" == "11" ] || \
-     [ "$cuda_version" == "110" ] || \
-     [ "$cuda_version" == "11-0" ] || [ "$cuda_version" == "11.0" ]; then \
-  cuda_version=cu110; \
-
-  filename=libtorch-macos-$version.zip; \
-
-else
-  echo "Operating system $os not supported. Stopping."
-fi
-base_url=https://download.pytorch.org/libtorch/$cuda_version
-if [ "$cuda" = true ]; then \
-  if [ "$cuda_version" = cpu ]; then \
+if [ "$cuda" = true ]; then
+  if [ "$cuda_version" = cpu ]; then
     echo "Cuda was set to $cuda, but cuda version is set to $cuda_version."
     exit 1
   fi
+  cv="cu"
+  major="\d{1,2}"
+  minor="((?<=[_\-.])\d+)|((?<=\d{2})\d+)"
+  v1=$(echo "$cuda_version" | grep -Po "$major" | head -1)
+  v2=$(echo $cuda_version | grep -Po "$minor" | head -1)
+  if [ -n "$v1" ]; then
+    cv+=$v1
+    if [ -n "$v2" ]; then
+      cv+=$v2
+    else
+      cv+="0"
+    fi
+  fi
+  cuda_version=$cv
 fi
 
-version=1.7.0
+base_url=https://download.pytorch.org/libtorch/$cuda_version
+
 os=$(echo "$os" | tr '[:upper:]' '[:lower:]')
-if [ "$os" == "lin" ] || [ "$os" == "linux" ] || [ "$os" == "ubuntu" ]; then \
-  if [ "$cuda" = true ]; then \
-    filename=libtorch-cxx11-abi-shared-with-deps-$version.zip; \
-  else
-    filename=libtorch-cxx11-abi-shared-with-deps-$version%2Bcpu.zip; \
+if [ "$os" == "lin" ] || [ "$os" == "linux" ] || [ "$os" == "ubuntu" ]; then
+    filename=libtorch-cxx11-abi-shared-with-deps-$version%2B$cuda_version.zip
+elif [ "$os" == "lin" ] || [ "$os" == "linux" ] || [ "$os" == "ubuntu" ]; then
+  filename=libtorch-win-shared-with-deps-$version%2B$cuda_version.zip
+elif [ "$os" == "mac" ] || [ "$os" == "apple" ] || [ "$os" == "macos" ]; then
+  if [ "$cuda" = true ]; then
+    echo "CUDA setting '$cuda' and operating system '$os' are incompatible. Stopping."
+    exit
   fi
-
-elif [ "$os" == "mac" ] || [ "$os" == "apple" ] || [ "$os" == "macos" ]; then \
-  if [ "$cuda" = true ]; then \
-    echo "CUDA setting '$cuda' and operating system '$os' are incompatible. Stopping.";
-  fi
-
-  filename=libtorch-macos-$version.zip; \
-
+  filename=libtorch-macos-$version.zip
 else
   echo "Operating system $os not supported. Stopping."
 fi
 url=$base_url/$filename
 bad_chars="\%2B"
 replacement="+"
-filename="${filename/$bad_chars/$replacement}"   # decode the potential hexadecimal %2B as the '+' char
+filename="${filename/$bad_chars/$replacement}" # decode the potential hexadecimal %2B as the '+' char
 
-
-printf "%s\n" "Will attempt to download:" "OS: $os" "CUDA: $cuda" "CUDA VERSION: $cuda_version" "BUILD: $build" "URL: $url" "TARGET DIR: $target_dir"
-
-if [ ! -d "$target_dir"/libtorch ]; then \
-  wget --directory-prefix="$target_dir" $url --no-verbose; \
-  unzip "$target_dir"/$filename -d "$target_dir"; \
-  rm "$target_dir"/$filename; \
+if [ ! -f "$target_dir/$filename" ]; then
+  printf "%s\n" "File $filename not found."
+  printf "%s\n" "Will attempt to download:" "OS: $os" "CUDA: $cuda" "CUDA VERSION: $cuda_version" "BUILD: $build" "URL: $url" "TARGET DIR: $target_dir"
+  wget --directory-prefix="$target_dir" "$url" --no-verbose
 else
-  echo "Folder 'libtorch' already exists. Stopping."; \
+  echo "Folder 'libtorch' already exists."
 fi
+
+unzip "$target_dir/$filename" -d "$target_dir"
+rm "$target_dir/$filename"
