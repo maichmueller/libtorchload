@@ -91,5 +91,8 @@ else
   echo "Folder 'libtorch' already exists."
 fi
 
-unzip "$target_dir/$filename" -d "$target_dir"
+unzip -q "$target_dir/$filename" -d "$target_dir"
 rm "$target_dir/$filename"
+if [ "$(echo "$build" | tr '[:upper:]' '[:lower:]')" == "debug" ]; then
+  mv "$target_dir/libtorch" "$target_dir/libtorch_debug"
+fi
