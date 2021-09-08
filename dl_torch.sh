@@ -40,6 +40,8 @@ for i in "$@"; do
   esac
 done
 
+build="$(echo "$build" | tr '[:upper:]' '[:lower:]')"
+
 if [ "$cuda" = true ]; then
   if [ "$cuda_version" = cpu ]; then
     echo "Cuda was set to $cuda, but cuda version is set to $cuda_version."
@@ -83,16 +85,29 @@ bad_chars="\%2B"
 replacement="+"
 filename="${filename/$bad_chars/$replacement}" # decode the potential hexadecimal %2B as the '+' char
 
-if [ ! -f "$target_dir/$filename" ]; then
-  printf "%s\n" "File $filename not found."
-  printf "%s\n" "Will attempt to download:" "OS: $os" "VERSION: $version" "CUDA: $cuda" "CUDA VERSION: $cuda_version" "BUILD: $build" "URL: $url" "TARGET DIR: $target_dir"
-  wget --directory-prefix="$target_dir" "$url" --no-verbose
+libtorch_exists=false
+if [ "$build" == "debug" ]; then
+  libtorch_exists=$([ ! -d "libtorch_debug" ])
 else
-  echo "Folder 'libtorch' already exists."
+  libtorch_exists=$([ ! -d "libtorch" ])
 fi
 
-unzip -q "$target_dir/$filename" -d "$target_dir"
-rm "$target_dir/$filename"
-if [ "$(echo "$build" | tr '[:upper:]' '[:lower:]')" == "debug" ]; then
-  mv "$target_dir/libtorch" "$target_dir/libtorch_debug"
+if [ ! "$libtorch_exists" ]; then
+  if [ ! -f "$target_dir/$filename" ]; then
+    printf "%s\n" "File $filename not found."
+    printf "%s\n" "Will attempt to download:" "OS: $os" "VERSION: $version" "CUDA: $cuda" "CUDA VERSION: $cuda_version" "BUILD: $build" "URL: $url" "TARGET DIR: $target_dir"
+    wget --directory-prefix="$target_dir" "$url" --no-verbose
+  else
+    echo "File $filename already exists. Not downloading. Extracting only."
+  fi
+
+  unzip -q "$target_dir/$filename" -d "$target_dir"
+  rm "$target_dir/$filename"
+  if [ "$(echo "$build" | tr '[:upper:]' '[:lower:]')" == "debug" ]; then
+    mv "$target_dir/libtorch" "$target_dir/libtorch_debug"
+  fi
+  
+else
+    echo "Folder 'libtorch' already exists."
 fi
+
