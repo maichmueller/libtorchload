@@ -61,13 +61,13 @@ if [ "$cuda" = true ]; then
   cuda_version=$cv
 fi
 
-base_url=https://download.pytorch.org/libtorch/$cuda_version
+base_url=https://download.pytorch.org/libtorch/$version
 
 os=$(echo "$os" | tr '[:upper:]' '[:lower:]')
 if [ "$os" == "lin" ] || [ "$os" == "linux" ] || [ "$os" == "ubuntu" ]; then
     filename=libtorch-cxx11-abi-shared-with-deps-$version%2B$cuda_version.zip
-elif [ "$os" == "lin" ] || [ "$os" == "linux" ] || [ "$os" == "ubuntu" ]; then
-  filename=libtorch-win-shared-with-deps-$version%2B$cuda_version.zip
+elif [ "$os" == "win" ] || [ "$os" == "windows" ] || [ "$os" == "win10" ]; then
+    filename=libtorch-win-shared-with-deps-$version%2B$cuda_version.zip
 elif [ "$os" == "mac" ] || [ "$os" == "apple" ] || [ "$os" == "macos" ]; then
   if [ "$cuda" = true ]; then
     echo "CUDA setting '$cuda' and operating system '$os' are incompatible. Stopping."
@@ -77,6 +77,7 @@ elif [ "$os" == "mac" ] || [ "$os" == "apple" ] || [ "$os" == "macos" ]; then
 else
   echo "Operating system $os not supported. Stopping."
 fi
+
 url=$base_url/$filename
 bad_chars="\%2B"
 replacement="+"
@@ -84,7 +85,7 @@ filename="${filename/$bad_chars/$replacement}" # decode the potential hexadecima
 
 if [ ! -f "$target_dir/$filename" ]; then
   printf "%s\n" "File $filename not found."
-  printf "%s\n" "Will attempt to download:" "OS: $os" "CUDA: $cuda" "CUDA VERSION: $cuda_version" "BUILD: $build" "URL: $url" "TARGET DIR: $target_dir"
+  printf "%s\n" "Will attempt to download:" "OS: $os" "VERSION: $version" "CUDA: $cuda" "CUDA VERSION: $cuda_version" "BUILD: $build" "URL: $url" "TARGET DIR: $target_dir"
   wget --directory-prefix="$target_dir" "$url" --no-verbose
 else
   echo "Folder 'libtorch' already exists."
