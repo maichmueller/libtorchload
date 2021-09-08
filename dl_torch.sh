@@ -61,7 +61,7 @@ if [ "$cuda" = true ]; then
   cuda_version=$cv
 fi
 
-base_url=https://download.pytorch.org/libtorch/$version
+base_url=https://download.pytorch.org/libtorch/$cuda_version
 
 os=$(echo "$os" | tr '[:upper:]' '[:lower:]')
 if [ "$os" == "lin" ] || [ "$os" == "linux" ] || [ "$os" == "ubuntu" ]; then
