@@ -9,6 +9,8 @@ import urllib.request
 import re
 from tqdm import tqdm
 
+PYTORCH_URL = "https://pytorch.org/get-started/locally/"
+
 
 class DownloadProgressBar(tqdm):
     def update_to(self, b=1, bsize=1, tsize=None):
@@ -52,13 +54,28 @@ def parse_cuda_version(v):
     return cv
 
 
+def check_bs4_import():
+    try:
+        from bs4 import BeautifulSoup
+
+        version = scrape_version()
+
+    except ModuleNotFoundError as e:
+        e.msg += (
+            "\nIf no cuda version information is provided, it is scraped from 'pytorch.org'."
+            " Package 'beautifulsoup4' is needed for this."
+        )
+        raise e
+    return version
+
+
 def scrape_version():
     from bs4 import BeautifulSoup
 
-    page = requests.get("https://pytorch.org/get-started/locally/")
+    page = requests.get(PYTORCH_URL)
     soup = BeautifulSoup(page.content, "html.parser")
-    version_div = soup.find("div", class_="col-md-4 option block version selected")
-    version_str = str(version_div.find("div", class_="option-text").contents[0])
+    download_subdiv = soup.find("div", attrs={"id": "stable"})
+    version_str = str(download_subdiv.find("div", class_="option-text").contents[0])
     version = re.search(r"(?<=\()[\w.]+(?=\))", version_str).group()
     return version
 
@@ -67,7 +84,7 @@ def parse_os(platform, cuda: bool, build: str):
     if platform in ["lin", "linux", "ubuntu", "unix"]:
         fname = "libtorch-cxx11-abi-shared-with-deps"
 
-    elif platform in ["mac", "apple", "macos", "osx"]:
+    elif platform in ["mac", "darwin", "apple", "macos", "osx"]:
         if cuda:
             raise ValueError(
                 f"CUDA setting {cuda} and operating system {platform} are incompatible. Stopping."
@@ -93,11 +110,15 @@ def main():
     )
 
     parser.add_argument(
-        "--os", type=str, nargs="?", default=sys.platform, help="The operating system",
+        "--os",
+        type=str,
+        nargs="?",
+        default=sys.platform,
+        help="The operating system",
     )
 
     parser.add_argument(
-        "--cuda_version",
+        "--cuv",
         metavar="the cuda version to load (or cpu)",
         type=str,
         nargs="?",
@@ -142,7 +163,7 @@ def main():
 
     args = parser.parse_args()
     cuda = args.cuda
-    cuda_version = parse_cuda_version(args.cuda_version)
+    cuda_version = parse_cuda_version(args.cuv)
     if cuda_version:
         cuda = not cuda_version == "cpu"
     build = args.build
@@ -153,17 +174,7 @@ def main():
     filename = parse_os(platform, cuda, build)
 
     if version == "":
-        try:
-            from bs4 import BeautifulSoup
-
-            version = scrape_version()
-
-        except ModuleNotFoundError as e:
-            e.msg += (
-                "\nIf no cuda version information is provided, it is scraped from 'pytorch.org'."
-                " Package 'beautifulsoup4' is needed for this."
-            )
-            raise e
+        version = check_bs4_import()
     filename += f"-{version}"
     if cuda_version == "cpu":
         filename += r"%2Bcpu"
@@ -187,7 +198,9 @@ def main():
         )
         and not force
     ):
-        pass
+        print(
+            "Target folder to unpack into already exists. Leaving the archive unpacked."
+        )
     else:
         print("Unpacking...", end="")
         with zipfile.ZipFile(fpath, "r") as zip_ref:
