@@ -8,6 +8,7 @@ import os
 import urllib.request
 import re
 from tqdm import tqdm
+from bs4 import BeautifulSoup
 
 PYTORCH_URL = "https://pytorch.org/get-started/locally/"
 
@@ -202,11 +203,11 @@ def main():
             "Target folder to unpack into already exists. Leaving the archive unpacked."
         )
     else:
-        print("Unpacking...", end="")
+        print("Unpacking...", end="", flush=True)
         with zipfile.ZipFile(fpath, "r") as zip_ref:
             for elem in zip_ref.namelist():
                 zip_ref.extract(elem, targetdir)
-        print("done.")
+        print("done.", flush=True)
     if "win" in platform and build == "debug":
         os.rename("libtorch", "libtorch_debug")
     os.remove(fpath)
